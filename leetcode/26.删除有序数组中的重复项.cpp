@@ -10,7 +10,6 @@
 
 
 // @lc code=start
-#include<vector>
 
 using namespace std;
 
