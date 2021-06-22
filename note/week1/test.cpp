@@ -22,7 +22,11 @@ int numberOfSubarrays(vector<int>& nums, int k) {
     return ans;
 }*/
 int main(){
-    int aa = 1;
-    cout << "aa" << aa % 2 << endl;
-    return 0;
+    vector<vector<int>> matrix; // 输入二维数组 matrix[x][y]
+    vector<vector<int>> s(matrix.size() + 1, vector<int>(matrix[0].size() + 1, 0)); // 前缀和二维数组
+    for (int x = 0; x <= matrix.size(); x++){
+        for(int y = 0; y <= matrix[0].size(); y++){
+            s[x + 1][y + 1] = s[x][y + 1] + s[x + 1][y] - s[x][y] + matrix[x][y];
+        }
+    }
 }
