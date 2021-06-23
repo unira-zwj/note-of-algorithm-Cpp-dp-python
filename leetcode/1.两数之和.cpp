@@ -27,7 +27,7 @@ public:
 
         int l = 0, r = newnums.size() - 1;
         for (l; l < r; l++){
-            while (l < r && newnums[l].first + newnums[r].first > target) r--;
+            while (newnums[l].first + newnums[r].first > target) r--;
             if (newnums[l].first + newnums[r].first == target) break;
         }
         return {newnums[l].second, newnums[r].second};

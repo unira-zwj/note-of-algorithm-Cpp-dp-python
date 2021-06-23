@@ -22,7 +22,7 @@ num[l] 增大； num[r]减小；
         int l = 0;
         int r = numbers.size() - 1;
         for (l = 0; l < r; l++){
-            while (l != r && numbers[l] + numbers[r] > target) r--;
+            while (numbers[l] + numbers[r] > target) r--;
             if (numbers[l] + numbers[r] == target) break;
         }
         return {l + 1, r + 1};
