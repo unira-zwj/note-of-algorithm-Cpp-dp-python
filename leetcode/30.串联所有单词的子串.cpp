@@ -32,9 +32,9 @@ class Solution {
 public:
     vector<int> findSubstring(string s, vector<string>& words) {
         unordered_map<string, int> map1 = words_to_nums(words);
-        int word_nums = words.size();
-        int word_size = words[0].size();
-        int n = word_nums * word_size;
+        int word_nums = words.size(); // word数量
+        int word_size = words[0].size(); // 每个word字符数
+        int n = word_nums * word_size;  // 总字符数，窗口长度
         vector<int> ans;
         // 设置多个起点
         for (int start = 0; start < word_size; start++){
