@@ -1,7 +1,7 @@
 /*
- * @lc app=leetcode.cn id=104 lang=cpp
+ * @lc app=leetcode.cn id=226 lang=cpp
  *
- * [104] 二叉树的最大深度
+ * [226] 翻转二叉树
  */
 
 // @lc code=start
@@ -16,11 +16,20 @@
  *     TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}
  * };
  */
+/*
+左右互换
+终止条件：节点为空
+*/
 class Solution {
 public:
-    int maxDepth(TreeNode* root){
-        if (root == nullptr) return 0;
-        return max(maxDepth(root->right), maxDepth(root->left)) + 1;
+    TreeNode* invertTree(TreeNode* root) {
+        if (root == nullptr) return nullptr;
+        TreeNode *temp = root->right;
+        root->right = root->left;
+        root->left = temp;
+        invertTree(root->right);
+        invertTree(root->left);
+        return root;
     }
 };
 // @lc code=end
