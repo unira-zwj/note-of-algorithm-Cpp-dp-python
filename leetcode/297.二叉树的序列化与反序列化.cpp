@@ -34,6 +34,7 @@ public:
     void toString(TreeNode* root, string& pre) {
         if (root == nullptr) {
             pre += "null,";
+            return;
         }else{
             pre += to_string(root->val) + ",";
             toString(root->left, pre);
@@ -44,31 +45,24 @@ public:
 
     // Decodes your encoded data to tree.
     TreeNode* deserialize(string data) {
-        queue<string> sout;
-        split(data, sout, ",");
-        return toTree(sout);
+        
+        queue<string> ans = split(data);
+        return toTree(ans);
     }
     // 前序遍历反序列化
     // 先把string串拆分
-    void split(string input, queue<string> output, string spl){
-        if (input.size() == 0) {
-            return;
+    queue<string> split(string& str) {
+        queue<string> sout;
+        if (str.empty()) return sout;
+        int pre = 0;
+        for (int i = 0; i <= str.size(); ++i) {
+            if (i == str.size() || str[i] == ',') {
+                sout.emplace(str.substr(pre, i-pre));
+                pre = i+1;
+            }
         }
-        string temp = {};
-        int index1 = 0;
-        int index2 = 0;
-        while (index1 < input.size()){
-            index2 = input.find(spl, index1);
-            temp = input.substr(index1, index2 - index1);
-            output.push(temp);
-            index1 = index2 + spl.size();
-        }
-        if (index1 < input.size()){
-            temp = input.substr(index1);
-            output.push(temp);
-        }
+        return sout;
     }
-    
     // 前序遍历反序列化
     TreeNode* toTree(queue<string>& sout){
         if (sout.front() == "null"){
