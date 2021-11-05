@@ -232,16 +232,43 @@ python版本：(package/scripts文件夹下)
 #!/usr/bin/env python
 # license removed for brevity
 import rospy
-from std_msgs.msg import String
+from geometry_msgs.msg import Twist
 
 def talker():
-    pub = rospy.Publisher('/turtle1/pose', String, queque_size=10)
+    
+    # 话题名字为：/turtle1/pose，话题类型为geometry_msgs.msg.Twist，消息队列长度为10
+    pub = rospy.Publisher('/turtle1/pose', Twist, queque_size=10)
+    
+    # rospy.init_node(NAME, ...)非常重要，因为它把该节点的名称告诉了rospy——只有rospy掌握了这一信息后，
+    # 才会开始与ROS主节点进行通信。在本例中，你的节点将使用talker名称。注意：名称必须是基本名称，
+    # 例如不能包含任何斜杠/，anonymous = True会让名称末尾添加随机数，来确保节点具有唯一的名称。
     rospy.init_node('talker', anonymous=True)
+  
     rate = rospy.Rate(10) 
+    
+    # 这个循环是一个相当标准的rospy结构：检查rospy.is_shutdown()标志，然后执行代码逻辑。
     while not rospy.is_shutdown():
+        
+        # 通过Twist消息类型，填充数据构造vel_msg消息对象
+        vel_msg = Twist()
 		vel_msg.linear.x = 0.5
 		vel_msg.angular.z = 0.2    
-        ros
+        rospy.loginfo('publish turtle message command [%0.2f m/s, %0.2f rad/s]', msg.linear.x , msg.angular.z)
+        pub.publish(vel_msg)
+        
+if __name__ == '__main__':
+    try:
+        talker()
+    except rospy.ROSInterruptException:
+        pass
+```
+
+CMakeLists.txt
+
+```cmake
+catkin_install_python(PROGRAMS scripts/talker.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 ```
 
 
@@ -333,6 +360,53 @@ $ roscore
 $ rosrun turtlesim turtlesim_node
 $ rosrun learning_topic pose_subscriber // 先在同一个终端设置环境变量
 ```
+
+python版本
+
+```python
+#!/usr/bin/env python
+import rospy
+from geometry_msgs.msg import Twist
+
+def callback(data):
+    rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
+    
+def listener():
+    
+    # 添加了anonymous=True关键字参数。
+    # ROS要求每个节点都有一个唯一的名称，如果出现具有相同名称的节点，则会与前一个节点发生冲突，
+    # 这样一来，出现故障的节点很容易地被踢出网络。
+    # anonymous=True标志会告诉rospy为节点生成唯一的名称，这样就很容易可以有多个listener.py一起运行。
+    rospy.init_node('listener', anonymous=True)
+    
+    # 声明订阅了名为/turtle1/pose的话题，话题类型是geometry_msgs.msg.Twist
+    # 当接收到新消息时，callback函数被调用
+    rospy.Subscriber("/turtle1/pose", Twist, callback)
+    
+    rospy.spin()
+    
+if __name__ == '__main__':
+    listener()
+```
+
+CMakeLists.txt
+
+```camke
+catkin_install_python(PROGRAMS scripts/talker.py scripts/listener.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+```
+
+运行
+
+```
+$ rosrun learning_topic pose_subscriber     # (C++)
+$ rosrun learning_topic pose_subscriber.py  # (Python) 
+```
+
+
+
+
 
 ## 自定义话题消息msg
 
@@ -499,8 +573,6 @@ $ cd ~/catkin_ws/src
 $ catkin_create_pkg learning_service roscpp rospy std_msgs geometry_msgs turtlesim
 ```
 
-
-
 1. 创建一个启动此service/client的cpp文件的节点
 
 2. 创建一个service/client的服务，注意service/client中的服务名字要一样
@@ -511,8 +583,6 @@ $ catkin_create_pkg learning_service roscpp rospy std_msgs geometry_msgs turtles
    ros::ServiceServer service = n.advertiseService("learn_srvs", add);
    ros::ServiceClient client = n.serviceClient<learn_srvs::learn>("learn_srvs");
    ```
-
-   
 
 4. 客户端根据定义的消息类型结构，更改消息内容创建请求数据
 
@@ -526,9 +596,173 @@ $ catkin_create_pkg learning_service roscpp rospy std_msgs geometry_msgs turtles
 
 
 
+**<u>自定义服务数据</u>**
 
+- 定义srv文件
 
+  ```cpp
+  string name 
+  uint8 age
+  uint8 sex
+  uint unknown = 0
+  uint male = 1
+  uint female = 2
+  ---
+  string result
+  ```
 
+  
+
+- package.xml文件添加功能包依赖
+
+  ```xml
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+  ```
+
+- CMakeLists文件
+
+  ```cmake
+  find_package(..
+  	.....
+  	message_generation)
+  	
+  add_service_files(FILES Person.srv)
+  generation_messages(DEPENDENCIED std_msgs)
+  
+  catkin_package(...
+  	...
+  	message_runtime)
+  ```
+
+  
+
+**<u>C++版服务器端</u>**
+
+`$ roscd learning_service`
+
+```c++
+/**
+ * person_server.cpp
+ * 初始化ROS节点
+ * 创建一个Server实例
+ * 循环等待服务请求，进入回调函数
+ * 在回调函数中完成服务器功能处理，反馈应答数据
+ */
+
+/**
+ * 创建/show_person服务，服务数据类型learning_service::Person
+ */
+
+#include <ros/ros.h>
+#include "learning_service/Person.h"
+
+/**
+ * 这个函数提供了Person服务，它接受srv文件中定义的请求（request）和响应（response）类型，
+ * 返回一个布尔值。
+ */
+bool personCallback(learning_service::Person::Request &req,
+                    learning_service::Person::Response &res)
+{
+    ROS_INFO("Person: name:%s  age:%d. sec:%d", req.name.c_str(), req.age, req.sex);
+    
+    /**
+     * 将字符串"OK"存储在应答数据result中
+     */
+    res.result = "OK";
+    return true;
+}
+
+int main(int argc, char** argv) {
+    ros::init(argc, argv, "Person_server");
+    ros::NodeHandle n;
+    
+    /**
+     * 创建一个名为/show_person的server，注册回调函数personCallback
+     */
+    ros::ServiceServer person_service = n.sdvertiseService("/show_person", personCallback);
+    ROS_INFO("Ready to show person information.");
+    ros::spin();
+    return 0;
+}
+```
+
+**<u>CMakeLists.txt</u>**
+
+- 设置需要编译的代码和生成的可执行文件
+- 设置链接库
+- 添加依赖项
+
+```Cmake
+add_executable(person_server src/person_server.cpp)
+target_link_libraries(person_server ${catkin_LIBRARIES})
+add_dependencies(person_server ${PROOJECT_NAME}_gencpp)
+```
+
+**<u>C++版客户端</u>**
+
+```cpp
+/**
+ * 初始化ROS节点
+ * 创建一个Client实例
+ * 发布服务器请求数据
+ * 等待Server处理之后的应答结果
+ */
+
+/**
+ * 请求/show_person服务，服务数据类型为learning_service::Person
+ */
+
+#include <ros/ros.h>
+#include "learning_service/Person.h"
+
+int main(int argc, char** argv) {
+    ros::init(argc, argv, "Person_client");
+    ros::NodeHandle n;
+    
+    /**
+     * 等待发现一个/show_person的服务
+     * 发现了之后创建一个
+     */
+    ros::service::waitForService("/show_person");
+    
+    /**
+     * 发现/show_person的服务之后，创建一个为/show_person服务的客户端
+     */
+    ros::ServiceClient person_client = n.serviceClient<learning_service::Person>("/show_person");
+    
+    learning_service::Person srv;
+    srv.request.name = "Tom";
+    srv.request.age = 10;
+    
+    // 注意大小写
+    srv.request.sex = learning_service::Person::Request::male;
+    
+    ROS_INFO("???");
+    person_client.call(srv);
+    
+    return 0;
+    
+}
+```
+
+# roswtf安全检查
+
+查看roscore是否在运行
+
+` $ ps -ef | grep -i rosmaster`
+
+安全检查
+
+`$ roscd rosmaster`
+
+`$ roswtf`
+
+在线检查
+
+`$ roscd`
+
+`$ roswtf`
 
 
 
@@ -590,8 +824,52 @@ $ catkin_create_pkg learning_service roscpp rospy std_msgs geometry_msgs turtles
     1. 别再乱搞了行吗，就这个地址
 
 14. ROS下的OpenCV配置：https://blog.csdn.net/weixin_43436587/article/details/107622477
+
 15. Jetson nano安装性能检测
     1. sudo -H pip install jtop
     2. sudo jtop
+    
 16. 更改风扇策略/etc/rc.local
+
 17. TCP通信，一定要释放缓存
+
+18. jetson nano设置开机自启和崩溃检测
+
+    ```c++
+    #!/bin/sh
+    
+    sleep 5    #启动前的睡眠时间
+    
+    proc_name="your_bin_name"     #你的要崩溃自启的程序名词
+    
+    proc_num()
+    {
+    	#通过名称查询系统的线程
+    	num=`ps -ef | grep "your_bin_name" | grep -v grep | wc -l`
+    	return $num
+    }
+    while true
+    do
+    	
+    	proc_num  #运行proc_num函数 输出
+    	number=$?	#从输出端获取数据
+    	if [ $number -eq 0 ]	#若线程数为0，即崩溃。
+    	then
+    		cd /your_bin_catalog  #重启
+    		setsid ./your_bin &
+    		echo "process has been restarted!"
+    	else
+    		echo "process already started!"
+    	fi
+    	sleep 10   #睡眠时间
+    done
+    
+    ```
+
+    `sudo chmod a+x run.sh`
+
+    `gnome-session-properties`
+
+    `*gnome-terminal -x /home/.../run.sh*`
+
+19. 
